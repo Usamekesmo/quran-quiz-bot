@@ -1,0 +1,13 @@
+app = "myquranbot"  # نفس الاسم الذي اخترته
+
+[build]
+  image = "flyio/python"
+
+[env]
+  TOKEN = "5703136061:AAFrMK91JYxHXgdRD9L3FtpNy3VTYHXleXo"  # أضف متغيرات البيئة هنا
+
+[http_service]
+  internal_port = 8080  # البورت الداخلي
+  force_https = true
+  auto_stop_machines = false  # مهم! لمنع إيقاف البوت
+  auto_start_machines = true
