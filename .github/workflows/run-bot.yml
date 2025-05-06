@@ -1,8 +1,8 @@
-name: Run Telegram Bot
+name: Run Telegram Bot Periodically
 
 on:
-  push:
-    branches: [ main ]  # أو main حسب اسم الفرع لديك
+  schedule:
+    - cron: '*/30 * * * *'  # يشغل كل 30 دقيقة
 
 jobs:
   run-bot:
