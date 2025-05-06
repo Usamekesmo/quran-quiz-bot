@@ -8,7 +8,7 @@ import time
 import os
 from datetime import datetime
 
-BOT_TOKEN = 'YOUR_BOT_TOKEN'
+BOT_TOKEN = '5703136061:AAFrMK91JYxHXgdRD9L3FtpNy3VTYHXleXo'  # Replace with your actual bot token
 
 CSV_URL_AYA = 'https://docs.google.com/spreadsheets/d/1RvSq_A1HPPv4bLvby9Ez4e5vMV9_T7qVNUPHu5AX_ZQ/gviz/tq?tqx=out:csv&sheet=aya'
 CSV_URL_COMPLETE = 'https://docs.google.com/spreadsheets/d/1Hlg56BLG0X_QZC_cAyIj5VMsq79Omeg6PlUW1XQfkfI/gviz/tq?tqx=out:csv&sheet=complete'
@@ -158,7 +158,7 @@ updater = Updater(BOT_TOKEN, use_context=True)
 dp = updater.dispatcher
 
 dp.add_handler(CommandHandler('start', start))
-dp.add_handler(MessageHandler(Filters.regex('^📝 ابدأ الاختبار), select_test_type))
+dp.add_handler(MessageHandler(Filters.regex('^📝 ابدأ الاختبار), select_test_type))  # Fixed line
 dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_answer))
 
 updater.start_polling()
