@@ -6,6 +6,7 @@ import io
 import random
 import os
 from datetime import datetime
+import re
 
 # إعداد المتغيرات والروابط
 BOT_TOKEN = '6671455687:AAHemRdgQbmodCsqeIaha55qfPml_h9cjVQ'
@@ -32,6 +33,23 @@ QURAN_SURAHS = [
 ]
 
 MAX_QUESTIONS = 25
+
+def normalize_surah_name(name):
+    """تقوم بتوحيد أسماء السور بإزالة الفراغات والحركات لتحسين المطابقة"""
+    if not name:
+        return ""
+    # إزالة جميع الفراغات والحركات والهمزات
+    name = re.sub(r'[\sًٌٍَُِّٰ]+', '', name)
+    # استبدال الهمزات بأشكالها الأساسية
+    replacements = {
+        'أ': 'ا',
+        'إ': 'ا',
+        'آ': 'ا',
+        'ة': 'ه',
+    }
+    for old, new in replacements.items():
+        name = name.replace(old, new)
+    return name.strip()
 
 def load_questions(url):
     try:
@@ -91,13 +109,8 @@ def select_surah(update: Update, context: CallbackContext):
     reply_markup = ReplyKeyboardMarkup(surah_groups, resize_keyboard=True)
     update.message.reply_text("📖 اختر السورة من الأزرار فقط:", reply_markup=reply_markup)
 
-def normalize_surah_name(name):
-    """تقوم بتوحيد أسماء السور بإزالة الفراغات والحركات لتحسين المطابقة"""
-    return name.replace(" ", "").replace("َ", "").replace("ُ", "").replace("ِ", "").replace("ّ", "")
-
 def begin_quiz(update: Update, context: CallbackContext):
     user_input = update.message.text.strip()
-    # البحث عن السورة المطابقة مع تطابق مرن
     matched_surah = None
     normalized_input = normalize_surah_name(user_input)
     
@@ -119,16 +132,55 @@ def begin_quiz(update: Update, context: CallbackContext):
         available_questions = [q for q in questions_next 
                              if normalize_surah_name(q.get('surah', '').strip()) == normalize_surah_name(matched_surah)]
     elif test_type == 'إكمال الآية':
-        available_questions = [q for q in questions_complete 
-                             if normalize_surah_name(q.get('sura', '').strip()) == normalize_surah_name(matched_surah)]
+        available_questions = []
+        for q in questions_complete:
+            try:
+                sura_name = q.get('surah', '').strip()
+                if normalize_surah_name(sura_name) == normalize_surah_name(matched_surah):
+                    ayacomplete = q.get('ayacomplete', '').strip()
+                    correct_words = [q.get(f'correctword{i}', '').strip() for i in range(1, 6)]
+                    correct_words = [w for w in correct_words if w]
+                    correct_answer = ' '.join(correct_words)
+                    
+                    question = {
+                        'type': 'complete',
+                        'surah': matched_surah,
+                        'ayacomplete': ayacomplete,
+                        'correct': correct_answer,
+                        'full_data': q
+                    }
+                    available_questions.append(question)
+            except Exception as e:
+                print(f"Error processing question: {e}")
+                continue
     elif test_type == 'ترتيب كلمات الآية':
         available_questions = [q for q in questions_order 
                              if normalize_surah_name(q.get('surah', '').strip()) == normalize_surah_name(matched_surah)]
     elif test_type == 'مزيج':
         next_q = [q for q in questions_next 
                  if normalize_surah_name(q.get('surah', '').strip()) == normalize_surah_name(matched_surah)]
-        complete_q = [q for q in questions_complete 
-                     if normalize_surah_name(q.get('sura', '').strip()) == normalize_surah_name(matched_surah)]
+        complete_q = []
+        for q in questions_complete:
+            try:
+                sura_name = q.get('surah', '').strip()
+                if normalize_surah_name(sura_name) == normalize_surah_name(matched_surah):
+                    ayacomplete = q.get('ayacomplete', '').strip()
+                    correct_words = [q.get(f'correctword{i}', '').strip() for i in range(1, 6)]
+                    correct_words = [w for w in correct_words if w]
+                    correct_answer = ' '.join(correct_words)
+                    
+                    question = {
+                        'type': 'complete',
+                        'surah': matched_surah,
+                        'ayacomplete': ayacomplete,
+                        'correct': correct_answer,
+                        'full_data': q
+                    }
+                    complete_q.append(question)
+            except Exception as e:
+                print(f"Error processing question: {e}")
+                continue
+        
         n = min(qcount // 2, len(next_q))
         c = min(qcount - n, len(complete_q))
         sample = []
@@ -141,10 +193,31 @@ def begin_quiz(update: Update, context: CallbackContext):
     elif test_type == 'اختبار شامل':
         next_q = [q for q in questions_next 
                  if normalize_surah_name(q.get('surah', '').strip()) == normalize_surah_name(matched_surah)]
-        complete_q = [q for q in questions_complete 
-                     if normalize_surah_name(q.get('sura', '').strip()) == normalize_surah_name(matched_surah)]
+        complete_q = []
+        for q in questions_complete:
+            try:
+                sura_name = q.get('surah', '').strip()
+                if normalize_surah_name(sura_name) == normalize_surah_name(matched_surah):
+                    ayacomplete = q.get('ayacomplete', '').strip()
+                    correct_words = [q.get(f'correctword{i}', '').strip() for i in range(1, 6)]
+                    correct_words = [w for w in correct_words if w]
+                    correct_answer = ' '.join(correct_words)
+                    
+                    question = {
+                        'type': 'complete',
+                        'surah': matched_surah,
+                        'ayacomplete': ayacomplete,
+                        'correct': correct_answer,
+                        'full_data': q
+                    }
+                    complete_q.append(question)
+            except Exception as e:
+                print(f"Error processing question: {e}")
+                continue
+        
         order_q = [q for q in questions_order 
                   if normalize_surah_name(q.get('surah', '').strip()) == normalize_surah_name(matched_surah)]
+        
         n = min(qcount // 3, len(next_q))
         c = min(qcount // 3, len(complete_q))
         o = min(qcount - n - c, len(order_q))
@@ -182,6 +255,7 @@ def send_next_question(update: Update, context: CallbackContext):
     idx = quiz['current']
     if idx >= len(quiz['questions']):
         return finish_quiz(update, context)
+    
     q = quiz['questions'][idx]
     t = quiz['test_type']
     
@@ -189,7 +263,7 @@ def send_next_question(update: Update, context: CallbackContext):
     if t in ['مزيج', 'اختبار شامل']:
         if 'choice1' in q:
             t = 'ما هي الآية التالية؟'
-        elif 'aya' in q:
+        elif 'ayacomplete' in q:
             t = 'إكمال الآية'
         elif 'k1' in q:
             t = 'ترتيب كلمات الآية'
@@ -217,12 +291,12 @@ def send_next_question(update: Update, context: CallbackContext):
         update.message.reply_text(msg, reply_markup=reply_markup)
         context.user_data['order_mode'] = False
     elif t == 'إكمال الآية':
-        msg = f"✍️ أكمل الآية:\n{q['aya']} ..."
-        context.user_data['correct_answer'] = q['correct'].strip()
+        msg = f"✍️ أكمل الآية:\n{q['ayacomplete']} ..."
+        context.user_data['correct_answer'] = q['correct']
         context.user_data['correction_data'] = {
             'type': t,
-            'question': q['aya'],
-            'correct': q['correct'].strip()
+            'question': q['ayacomplete'],
+            'correct': q['correct']
         }
         update.message.reply_text(msg, reply_markup=ReplyKeyboardRemove())
         context.user_data['order_mode'] = False
@@ -268,8 +342,10 @@ def handle_answer(update: Update, context: CallbackContext):
     idx = quiz['current']
     if idx >= len(quiz['questions']):
         return finish_quiz(update, context)
+    
     user_answer = update.message.text.strip()
     correction_data = context.user_data.get('correction_data', {})
+    
     if context.user_data.get('order_mode'):
         try:
             indices = [int(x)-1 for x in user_answer.split()]
@@ -296,7 +372,14 @@ def handle_answer(update: Update, context: CallbackContext):
         if correct_answer is None:
             update.message.reply_text("⚠️ خطأ في النظام. الرجاء البدء من جديد.")
             return start(update, context)
-        if user_answer == correct_answer:
+        
+        # مقارنة مرنة للإجابة
+        if quiz['test_type'] == 'إكمال الآية':
+            is_correct = normalize_surah_name(user_answer) == normalize_surah_name(correct_answer)
+        else:
+            is_correct = user_answer == correct_answer
+            
+        if is_correct:
             update.message.reply_text("✅ إجابة صحيحة! +5 نقاط")
             quiz['score'] += 5
         else:
@@ -307,6 +390,7 @@ def handle_answer(update: Update, context: CallbackContext):
                 'your_answer': user_answer,
                 'correct': correction_data.get('correct', '')
             })
+    
     quiz['current'] += 1
     send_next_question(update, context)
 
@@ -315,10 +399,12 @@ def finish_quiz(update: Update, context: CallbackContext):
     if not quiz:
         update.message.reply_text("❗️ الجلسة انتهت. أرسل /start للبدء من جديد.")
         return
+    
     name = context.user_data.get('name', 'مجهول')
     score = quiz['score']
     max_score = len(quiz['questions']) * 5
     percentage = (score / max_score) * 100 if max_score > 0 else 0
+    
     result_msg = (
         f"🎉 انتهى الاختبار!\n"
         f"📌 الاسم: {name}\n"
@@ -328,23 +414,27 @@ def finish_quiz(update: Update, context: CallbackContext):
         f"📊 النسبة: {percentage:.1f}%"
     )
     update.message.reply_text(result_msg)
+    
     # عرض التصحيحات
     if quiz['corrections']:
         msg = "❌ الأسئلة الخاطئة وتصحيحاتها:\n"
         for i, c in enumerate(quiz['corrections'], 1):
             msg += f"\n{i}. [{c['type']}]\nس: {c['question']}\nإجابتك: {c['your_answer']}\nالصحيح: {c['correct']}\n"
         update.message.reply_text(msg)
+    
     save_result(name, score, quiz['surah'], quiz['test_type'])
     context.user_data.clear()
 
 def main():
     updater = Updater(BOT_TOKEN, use_context=True)
     dp = updater.dispatcher
+    
     dp.add_handler(CommandHandler('start', start))
     dp.add_handler(MessageHandler(Filters.regex('^(ما هي الآية التالية؟|إكمال الآية|ترتيب كلمات الآية|مزيج|اختبار شامل)$'), ask_question_count))
     dp.add_handler(MessageHandler(Filters.regex('^\d+$'), handle_answer))
     dp.add_handler(MessageHandler(Filters.text & ~Filters.command, begin_quiz))
     dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_answer))
+    
     updater.start_polling()
     print("Bot is running...")
     updater.idle()
