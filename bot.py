@@ -91,29 +91,44 @@ def select_surah(update: Update, context: CallbackContext):
     reply_markup = ReplyKeyboardMarkup(surah_groups, resize_keyboard=True)
     update.message.reply_text("📖 اختر السورة من الأزرار فقط:", reply_markup=reply_markup)
 
+def normalize_surah_name(name):
+    """تقوم بتوحيد أسماء السور بإزالة الفراغات والحركات لتحسين المطابقة"""
+    return name.replace(" ", "").replace("َ", "").replace("ُ", "").replace("ِ", "").replace("ّ", "")
+
 def begin_quiz(update: Update, context: CallbackContext):
-    surah = update.message.text.strip()
-    # تطابق مرن: إزالة الفراغات الزائدة
-    surah = surah.replace(" ", "")
-    surah_list = [s.replace(" ", "") for s in QURAN_SURAHS]
-    if surah not in surah_list:
+    user_input = update.message.text.strip()
+    # البحث عن السورة المطابقة مع تطابق مرن
+    matched_surah = None
+    normalized_input = normalize_surah_name(user_input)
+    
+    for surah in QURAN_SURAHS:
+        if normalize_surah_name(surah) == normalized_input:
+            matched_surah = surah
+            break
+    
+    if not matched_surah:
         surah_groups = [QURAN_SURAHS[i:i+3] for i in range(0, len(QURAN_SURAHS), 3)]
         reply_markup = ReplyKeyboardMarkup(surah_groups, resize_keyboard=True)
         update.message.reply_text("⚠️ السورة غير معروفة. الرجاء الاختيار من القائمة.", reply_markup=reply_markup)
         return
-    # استرجاع الاسم الصحيح للسورة
-    surah = QURAN_SURAHS[surah_list.index(surah)]
+    
     test_type = context.user_data.get('test_type')
     qcount = context.user_data.get('question_count', 10)
+    
     if test_type == 'ما هي الآية التالية؟':
-        available_questions = [q for q in questions_next if q.get('surah', '').strip() == surah]
+        available_questions = [q for q in questions_next 
+                             if normalize_surah_name(q.get('surah', '').strip()) == normalize_surah_name(matched_surah)]
     elif test_type == 'إكمال الآية':
-        available_questions = [q for q in questions_complete if q.get('sura', '').strip() == surah]
+        available_questions = [q for q in questions_complete 
+                             if normalize_surah_name(q.get('sura', '').strip()) == normalize_surah_name(matched_surah)]
     elif test_type == 'ترتيب كلمات الآية':
-        available_questions = [q for q in questions_order if q.get('surah', '').strip() == surah]
+        available_questions = [q for q in questions_order 
+                             if normalize_surah_name(q.get('surah', '').strip()) == normalize_surah_name(matched_surah)]
     elif test_type == 'مزيج':
-        next_q = [q for q in questions_next if q.get('surah', '').strip() == surah]
-        complete_q = [q for q in questions_complete if q.get('sura', '').strip() == surah]
+        next_q = [q for q in questions_next 
+                 if normalize_surah_name(q.get('surah', '').strip()) == normalize_surah_name(matched_surah)]
+        complete_q = [q for q in questions_complete 
+                     if normalize_surah_name(q.get('sura', '').strip()) == normalize_surah_name(matched_surah)]
         n = min(qcount // 2, len(next_q))
         c = min(qcount - n, len(complete_q))
         sample = []
@@ -124,9 +139,12 @@ def begin_quiz(update: Update, context: CallbackContext):
         random.shuffle(sample)
         available_questions = sample
     elif test_type == 'اختبار شامل':
-        next_q = [q for q in questions_next if q.get('surah', '').strip() == surah]
-        complete_q = [q for q in questions_complete if q.get('sura', '').strip() == surah]
-        order_q = [q for q in questions_order if q.get('surah', '').strip() == surah]
+        next_q = [q for q in questions_next 
+                 if normalize_surah_name(q.get('surah', '').strip()) == normalize_surah_name(matched_surah)]
+        complete_q = [q for q in questions_complete 
+                     if normalize_surah_name(q.get('sura', '').strip()) == normalize_surah_name(matched_surah)]
+        order_q = [q for q in questions_order 
+                  if normalize_surah_name(q.get('surah', '').strip()) == normalize_surah_name(matched_surah)]
         n = min(qcount // 3, len(next_q))
         c = min(qcount // 3, len(complete_q))
         o = min(qcount - n - c, len(order_q))
@@ -144,7 +162,7 @@ def begin_quiz(update: Update, context: CallbackContext):
         return
 
     if not available_questions:
-        update.message.reply_text(f"⚠️ لا توجد أسئلة متاحة لسورة {surah}")
+        update.message.reply_text(f"⚠️ لا توجد أسئلة متاحة لسورة {matched_surah}")
         return
 
     selected_questions = random.sample(available_questions, min(qcount, len(available_questions)))
@@ -152,11 +170,11 @@ def begin_quiz(update: Update, context: CallbackContext):
         'questions': selected_questions,
         'current': 0,
         'score': 0,
-        'surah': surah,
+        'surah': matched_surah,
         'test_type': test_type,
         'corrections': []
     }
-    update.message.reply_text(f"بدأ اختبار {test_type} لسورة {surah}", reply_markup=ReplyKeyboardRemove())
+    update.message.reply_text(f"بدأ اختبار {test_type} لسورة {matched_surah}", reply_markup=ReplyKeyboardRemove())
     send_next_question(update, context)
 
 def send_next_question(update: Update, context: CallbackContext):
@@ -166,6 +184,7 @@ def send_next_question(update: Update, context: CallbackContext):
         return finish_quiz(update, context)
     q = quiz['questions'][idx]
     t = quiz['test_type']
+    
     # كشف نوع السؤال في المزيج والشامل
     if t in ['مزيج', 'اختبار شامل']:
         if 'choice1' in q:
@@ -324,7 +343,7 @@ def main():
     dp.add_handler(CommandHandler('start', start))
     dp.add_handler(MessageHandler(Filters.regex('^(ما هي الآية التالية؟|إكمال الآية|ترتيب كلمات الآية|مزيج|اختبار شامل)$'), ask_question_count))
     dp.add_handler(MessageHandler(Filters.regex('^\d+$'), handle_answer))
-    dp.add_handler(MessageHandler(Filters.regex('|'.join(QURAN_SURAHS)), begin_quiz))
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, begin_quiz))
     dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_answer))
     updater.start_polling()
     print("Bot is running...")
