@@ -7,14 +7,9 @@ import random
 import os
 from datetime import datetime
 
-<<<<<<< HEAD
-BOT_TOKEN = '5703136061:AAFrMK91JYxHXgdRD9L3FtpNy3VTYHXleXo'
+# إعداد المتغيرات والروابط
+BOT_TOKEN = '6671455687:AAHemRdgQbmodCsqeIaha55qfPml_h9cjVQ'
 CSV_URL_NEXT = 'https://docs.google.com/spreadsheets/d/1RvSq_A1HPPv4bLvby9Ez4e5vMV9_T7qVNUPHu5AX_ZQ/gviz/tq?tqx=out:csv&sheet=aya'
-=======
-BOT_TOKEN = '5703136061:AAFrMK91JYxHXgdRD9L3FtpNy3VTYHXleXo'  # Replace with your actual bot token
-
-CSV_URL_AYA = 'https://docs.google.com/spreadsheets/d/1RvSq_A1HPPv4bLvby9Ez4e5vMV9_T7qVNUPHu5AX_ZQ/gviz/tq?tqx=out:csv&sheet=aya'
->>>>>>> a78aebaef027acb89145201292596201c54f598c
 CSV_URL_COMPLETE = 'https://docs.google.com/spreadsheets/d/1Hlg56BLG0X_QZC_cAyIj5VMsq79Omeg6PlUW1XQfkfI/gviz/tq?tqx=out:csv&sheet=complete'
 CSV_URL_ORDER = 'https://docs.google.com/spreadsheets/d/1opUbpiRngFk8tJVqt-jffAkr27kI9CwpAdd7QnOFsK4/gviz/tq?tqx=out:csv&sheet=order'
 
@@ -39,7 +34,6 @@ QURAN_SURAHS = [
 MAX_QUESTIONS = 25
 
 def load_questions(url):
-<<<<<<< HEAD
     try:
         response = requests.get(url)
         response.raise_for_status()
@@ -49,23 +43,16 @@ def load_questions(url):
     except Exception as e:
         print(f"Error loading questions: {e}")
         return []
-=======
-response = requests.get(url)
-data = response.content.decode('utf-8')
-reader = csv.DictReader(io.StringIO(data))
-return list(reader)
->>>>>>> a78aebaef027acb89145201292596201c54f598c
 
 questions_next = load_questions(CSV_URL_NEXT)
 questions_complete = load_questions(CSV_URL_COMPLETE)
 questions_order = load_questions(CSV_URL_ORDER)
 
 def start(update: Update, context: CallbackContext):
-update.message.reply_text("✍️ من فضلك، أدخل اسمك قبل البدء:")
-context.user_data.clear()
-context.user_data['awaiting_name'] = True
+    update.message.reply_text("✍️ من فضلك، أدخل اسمك قبل البدء:")
+    context.user_data.clear()
+    context.user_data['awaiting_name'] = True
 
-<<<<<<< HEAD
 def save_result(name, score, surah, test_type):
     filename = 'results.csv'
     file_exists = os.path.isfile(filename)
@@ -102,16 +89,22 @@ def select_surah(update: Update, context: CallbackContext):
     context.user_data['awaiting_question_count'] = False
     surah_groups = [QURAN_SURAHS[i:i+3] for i in range(0, len(QURAN_SURAHS), 3)]
     reply_markup = ReplyKeyboardMarkup(surah_groups, resize_keyboard=True)
-    update.message.reply_text("📖 اختر السورة:", reply_markup=reply_markup)
+    update.message.reply_text("📖 اختر السورة من الأزرار فقط:", reply_markup=reply_markup)
 
 def begin_quiz(update: Update, context: CallbackContext):
     surah = update.message.text.strip()
-    if surah not in QURAN_SURAHS:
-        update.message.reply_text("⚠️ السورة غير معروفة. الرجاء الاختيار من القائمة.")
+    # تطابق مرن: إزالة الفراغات الزائدة
+    surah = surah.replace(" ", "")
+    surah_list = [s.replace(" ", "") for s in QURAN_SURAHS]
+    if surah not in surah_list:
+        surah_groups = [QURAN_SURAHS[i:i+3] for i in range(0, len(QURAN_SURAHS), 3)]
+        reply_markup = ReplyKeyboardMarkup(surah_groups, resize_keyboard=True)
+        update.message.reply_text("⚠️ السورة غير معروفة. الرجاء الاختيار من القائمة.", reply_markup=reply_markup)
         return
+    # استرجاع الاسم الصحيح للسورة
+    surah = QURAN_SURAHS[surah_list.index(surah)]
     test_type = context.user_data.get('test_type')
     qcount = context.user_data.get('question_count', 10)
-    # تصفية الأسئلة حسب السورة والنوع
     if test_type == 'ما هي الآية التالية؟':
         available_questions = [q for q in questions_next if q.get('surah', '').strip() == surah]
     elif test_type == 'إكمال الآية':
@@ -336,144 +329,6 @@ def main():
     updater.start_polling()
     print("Bot is running...")
     updater.idle()
-=======
-def save_result(name, score):
-filename = 'results.csv'
-file_exists = os.path.isfile(filename)
-with open(filename, mode='a', newline='', encoding='utf-8') as file:
-writer = csv.writer(file)
-if not file_exists:
-writer.writerow(['الاسم', 'النتيجة', 'التاريخ'])
-writer.writerow([name, score, datetime.now().strftime("%Y-%m-%d %H:%M:%S")])
 
-def select_test_type(update: Update, context: CallbackContext):
-keyboard = [['آيات', 'إكمال']]
-reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-update.message.reply_text("📚 اختر نوع الاختبار:", reply_markup=reply_markup)
-
-def select_surah(update: Update, context: CallbackContext):
-test_type = update.message.text.strip()
-context.user_data['test_type'] = test_type
-
-if test_type == 'آيات':
-surahs = ['الفاتحة', 'البقرة', 'آل عمران']  # Add more Surahs as needed
-else:
-surahs = ['الفاتحة', 'البقرة', 'آل عمران']  # Add more Surahs as needed
-
-keyboard = [[surah] for surah in surahs]
-reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-update.message.reply_text("📖 اختر السورة:", reply_markup=reply_markup)
-
-def begin_quiz(update: Update, context: CallbackContext):
-surah = update.message.text.strip()
-test_type = context.user_data.get('test_type')
-
-if test_type == 'آيات':
-# Load questions for the selected Surah (implement filtering logic based on Surah)
-aya_sample = random.sample(questions_aya, 10)  # Adjust to filter by Surah
-combined = [{'type': 'aya', 'data': q} for q in aya_sample]
-else:
-# Load questions for the selected Surah (implement filtering logic based on Surah)
-complete_sample = random.sample(questions_complete, 10)  # Adjust to filter by Surah
-combined = [{'type': 'complete', 'data': q} for q in complete_sample]
-
-random.shuffle(combined)
-
-context.user_data['quiz'] = {
-'questions': combined,
-'current': 0,
-'score': 0,
-'start_time': time.time()
-}
-
-send_next_question(update, context)
-
-def send_next_question(update: Update, context: CallbackContext):
-quiz = context.user_data.get('quiz')
-if not quiz:
-update.message.reply_text("⚠️ لم يتم بدء الاختبار بعد.")
-return
-
-elapsed_time = time.time() - quiz['start_time']
-remaining_seconds = int((20 * 60) - elapsed_time)
-
-if remaining_seconds <= 0 or quiz['current'] >= 20:
-finish_quiz(update, context)
-return
-
-minutes, seconds = divmod(remaining_seconds, 60)
-update.message.reply_text(f"🕒 الوقت المتبقي: {minutes}:{str(seconds).zfill(2)} دقيقة")
-
-q = quiz['questions'][quiz['current']]
-context.user_data['current_question'] = q
-
-if q['type'] == 'aya':
-data = q['data']
-text = data['text']
-choices = [data['choice1'], data['choice2'], data['choice3'], data['choice4']]
-correct_index = int(data['correct']) - 1
-correct_text = choices[correct_index]
-random.shuffle(choices)
-new_correct_index = choices.index(correct_text)
-context.user_data['expected'] = str(new_correct_index + 1)
-
-msg = f"📖 الآية:\n{text}\n\nما الآية التالية؟\n"
-for i, c in enumerate(choices, 1):
-msg += f"{i}. {c}\n"
-msg += "\n✏️ أرسل رقم الإجابة الصحيحة"
-update.message.reply_text(msg)
-
-else:
-data = q['data']
-context.user_data['expected'] = data['correct'].strip()
-msg = f"✍️ أكمل الآية:\n{data['aya']}..."
-update.message.reply_text(msg)
-
-def handle_answer(update: Update, context: CallbackContext):
-if context.user_data.get('awaiting_name'):
-name = update.message.text.strip()
-context.user_data['name'] = name
-context.user_data['awaiting_name'] = False
-select_test_type(update, context)
-return
-
-quiz = context.user_data.get('quiz')
-expected = context.user_data.get('expected')
-if not quiz or expected is None:
-update.message.reply_text("❗️ أرسل /start للبدء من جديد.")
-return
-
-user_answer = update.message.text.strip()
-if user_answer == expected:
-update.message.reply_text("✅ إجابة صحيحة! +5 نقاط")
-quiz['score'] += 5
-else:
-update.message.reply_text(f"❌ إجابة خاطئة.\nالإجابة الصحيحة: {expected}")
-
-quiz['current'] += 1
-send_next_question(update, context)
-
-def finish_quiz(update: Update, context: CallbackContext):
-quiz = context.user_data.get('quiz')
-if not quiz:
-return
-name = context.user_data.get('name', 'مستخدم مجهول')
-score = quiz['score']
-update.message.reply_text(f"🎉 انتهى الاختبار!\n📌 الاسم: {name}\n✅ النتيجة: {score} / 100")
-save_result(name, score)
-context.user_data.clear()
-
-def main():
-updater = Updater(BOT_TOKEN, use_context=True)
-dp = updater.dispatcher
-
-dp.add_handler(CommandHandler('start', start))
-dp.add_handler(MessageHandler(Filters.regex('^📝 ابدأ الاختبار), select_test_type))  # Fixed line
-dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_answer))
-
-updater.start_polling()
-updater.idle()
->>>>>>> a78aebaef027acb89145201292596201c54f598c
-
-if __name__ == '__main__':
-main()
+if __name__ == "__main__":
+    main()
